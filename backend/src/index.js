@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import authRoutes from './routes/auth.routes.js';
+import dogsRoutes from './routes/dogs.routes.js';
 
 dotenv.config();
 
@@ -18,6 +19,7 @@ app.use(cors());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
+app.use('/api/dogs', dogsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
