@@ -141,3 +141,18 @@ dist
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 .vite/
+
+# Environment files (already covered but let's be explicit)
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Frontend build
+frontend/dist
+
+# Backend build
+backend/dist
+
+# Uploaded files (PDFs from vets)
+backend/uploads/
