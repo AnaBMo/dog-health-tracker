@@ -4,6 +4,10 @@ import dotenv from 'dotenv';
 import { createClient } from '@supabase/supabase-js';
 import authRoutes from './routes/auth.routes.js';
 import dogsRoutes from './routes/dogs.routes.js';
+import vetVisitsRoutes from './routes/vetVisits.routes.js';
+import vaccinesRoutes from './routes/vaccines.routes.js';
+import treatmentsRoutes from './routes/treatments.routes.js';
+import allergiesRoutes from './routes/allergies.routes.js';
 
 dotenv.config();
 
@@ -20,6 +24,10 @@ app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/dogs', dogsRoutes);
+app.use('/api/dogs', vetVisitsRoutes);
+app.use('/api/dogs', vaccinesRoutes);
+app.use('/api/dogs', treatmentsRoutes);
+app.use('/api/dogs', allergiesRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
