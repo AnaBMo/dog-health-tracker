@@ -1,14 +1,8 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
+import { Link } from 'react-router-dom';
+import apiClient from '../../api/client';
 
 const Register = () => {
-  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm] = useState('');
@@ -33,12 +27,11 @@ const Register = () => {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.signUp({ email, password });
-
-    if (error) {
-      setError('No se pudo crear la cuenta. Inténtalo de nuevo.');
-    } else {
+    try {
+      await apiClient.post('/auth/register', { email, password });
       setSuccess('¡Cuenta creada! Revisa tu email para confirmar el registro.');
+    } catch (err) {
+      setError('No se pudo crear la cuenta. Inténtalo de nuevo.');
     }
 
     setLoading(false);

@@ -1,11 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  import.meta.env.VITE_SUPABASE_URL,
-  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-);
+import apiClient from '../../api/client';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -19,12 +14,12 @@ const Login = () => {
     setError('');
     setLoading(true);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
+    try {
+      const { data } = await apiClient.post('/auth/login', { email, password });
+      localStorage.setItem('token', data.session.access_token);
+      window.location.href = '/dashboard';
+    } catch (err) {
       setError('Email o contraseña incorrectos');
-    } else {
-      navigate('/dashboard');
     }
 
     setLoading(false);

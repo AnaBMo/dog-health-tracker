@@ -14,26 +14,44 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Verificar si hay token en localStorage al cargar
+    const storedToken = localStorage.getItem('token');
+    if (storedToken) {
+      supabase.auth.getUser(storedToken).then(({ data, error }) => {
+        if (!error && data.user) {
+          setUser(data.user);
+          setToken(storedToken);
+        } else {
+          localStorage.removeItem('token');
+          setUser(null);
+          setToken(null);
+        }
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }, []);
+
+  // Escuchar cambios de sesión
+  useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
           setUser(session.user);
           setToken(session.access_token);
           localStorage.setItem('token', session.access_token);
-        } else {
-          setUser(null);
-          setToken(null);
-          localStorage.removeItem('token');
         }
-        setLoading(false);
       }
     );
-
     return () => subscription.unsubscribe();
   }, []);
 
   const logout = async () => {
     await supabase.auth.signOut();
+    localStorage.removeItem('token');
+    setUser(null);
+    setToken(null);
   };
 
   return (
