@@ -9,6 +9,7 @@ import vaccinesRoutes from './routes/vaccines.routes.js';
 import treatmentsRoutes from './routes/treatments.routes.js';
 import allergiesRoutes from './routes/allergies.routes.js';
 import documentsRoutes from './routes/documents.routes.js';
+import agentsRoutes from './routes/agents.routes.js';
 
 dotenv.config();
 
@@ -30,6 +31,7 @@ app.use('/api/dogs', vaccinesRoutes);
 app.use('/api/dogs', treatmentsRoutes);
 app.use('/api/dogs', allergiesRoutes);
 app.use('/api/dogs', documentsRoutes);
+app.use('/api/agents', agentsRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ 
