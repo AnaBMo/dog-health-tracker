@@ -1,10 +1,10 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 import { analyzeHealthReport } from '../agents/reportAnalysis.agent.js';
 import { getProactiveRecommendations } from '../agents/proactiveTracking.agent.js';
 import { conversationalChat } from '../agents/conversationalQuery.agent.js';
 import { generateSmartAlerts } from '../agents/smartAlerts.agent.js';
 
-const getUserAISettings = async (userId) => {
+const getUserAISettings = async (supabase, userId) => {
   const { data, error } = await supabase
     .from('user_settings')
     .select('ai_provider, ai_api_key')
@@ -17,7 +17,7 @@ const getUserAISettings = async (userId) => {
   return data;
 };
 
-const getDogRecords = async (dogId, userId) => {
+const getDogRecords = async (supabase, dogId, userId) => {
   const { data: dog, error: dogError } = await supabase
     .from('dogs')
     .select('*')
@@ -48,9 +48,10 @@ const getDogRecords = async (dogId, userId) => {
 // POST /api/agents/:dogId/analyze
 export const analyzeReport = async (req, res) => {
   try {
+    const supabase = supabaseWithAuth(req.token);
     const { dogId } = req.params;
-    const { ai_provider, ai_api_key } = await getUserAISettings(req.user.id);
-    const { dog, records } = await getDogRecords(dogId, req.user.id);
+    const { ai_provider, ai_api_key } = await getUserAISettings(supabase, req.user.id);
+    const { dog, records } = await getDogRecords(supabase, dogId, req.user.id);
 
     const report = await analyzeHealthReport(dog, records, ai_provider, ai_api_key);
 
@@ -63,9 +64,10 @@ export const analyzeReport = async (req, res) => {
 // POST /api/agents/:dogId/tracking
 export const proactiveTracking = async (req, res) => {
   try {
+    const supabase = supabaseWithAuth(req.token);
     const { dogId } = req.params;
-    const { ai_provider, ai_api_key } = await getUserAISettings(req.user.id);
-    const { dog, records } = await getDogRecords(dogId, req.user.id);
+    const { ai_provider, ai_api_key } = await getUserAISettings(supabase, req.user.id);
+    const { dog, records } = await getDogRecords(supabase, dogId, req.user.id);
 
     const result = await getProactiveRecommendations(dog, records, ai_provider, ai_api_key);
 
@@ -79,23 +81,22 @@ export const proactiveTracking = async (req, res) => {
 // Body: { message: string, history: [{role: 'user'|'assistant', content: string}] }
 export const chat = async (req, res) => {
   try {
+    const supabase = supabaseWithAuth(req.token);
     const { dogId } = req.params;
     const { message, history = [] } = req.body;
 
     if (!message) return res.status(400).json({ error: 'Message is required' });
 
-    // Limitar historial a los últimos 20 mensajes para no exceder tokens
     const trimmedHistory = history.slice(-20);
 
-    const { ai_provider, ai_api_key } = await getUserAISettings(req.user.id);
-    const { dog, records } = await getDogRecords(dogId, req.user.id);
+    const { ai_provider, ai_api_key } = await getUserAISettings(supabase, req.user.id);
+    const { dog, records } = await getDogRecords(supabase, dogId, req.user.id);
 
     const reply = await conversationalChat(dog, records, trimmedHistory, message, ai_provider, ai_api_key);
 
     res.json({
       dog_name: dog.name,
       reply,
-      // Devolvemos el historial actualizado para que el frontend lo gestione
       updated_history: [
         ...trimmedHistory,
         { role: 'user', content: message },
@@ -110,9 +111,10 @@ export const chat = async (req, res) => {
 // POST /api/agents/:dogId/alerts
 export const smartAlerts = async (req, res) => {
   try {
+    const supabase = supabaseWithAuth(req.token);
     const { dogId } = req.params;
-    const { ai_provider, ai_api_key } = await getUserAISettings(req.user.id);
-    const { dog, records } = await getDogRecords(dogId, req.user.id);
+    const { ai_provider, ai_api_key } = await getUserAISettings(supabase, req.user.id);
+    const { dog, records } = await getDogRecords(supabase, dogId, req.user.id);
 
     const result = await generateSmartAlerts(dog, records, ai_provider, ai_api_key);
 

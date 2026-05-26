@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
 export const getDogs = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('dogs')
     .select('*')
@@ -12,6 +13,7 @@ export const getDogs = async (req, res) => {
 };
 
 export const getDog = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('dogs')
     .select('*')
@@ -25,6 +27,7 @@ export const getDog = async (req, res) => {
 };
 
 export const createDog = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, breed, birth_date, weight, photo_url, notes } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Name is required' });
@@ -41,6 +44,7 @@ export const createDog = async (req, res) => {
 };
 
 export const updateDog = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, breed, birth_date, weight, photo_url, notes } = req.body;
 
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const updateDog = async (req, res) => {
 };
 
 export const deleteDog = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { error } = await supabase
     .from('dogs')
     .delete()

@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
 export const getVetVisits = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('vet_visits')
     .select('*')
@@ -12,6 +13,7 @@ export const getVetVisits = async (req, res) => {
 };
 
 export const getVetVisit = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('vet_visits')
     .select('*')
@@ -25,6 +27,7 @@ export const getVetVisit = async (req, res) => {
 };
 
 export const createVetVisit = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { visit_date, reason, diagnosis, notes, document_url } = req.body;
 
   if (!visit_date) return res.status(400).json({ error: 'Visit date is required' });
@@ -41,6 +44,7 @@ export const createVetVisit = async (req, res) => {
 };
 
 export const updateVetVisit = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { visit_date, reason, diagnosis, notes, document_url } = req.body;
 
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const updateVetVisit = async (req, res) => {
 };
 
 export const deleteVetVisit = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { error } = await supabase
     .from('vet_visits')
     .delete()

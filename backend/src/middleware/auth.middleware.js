@@ -16,5 +16,6 @@ export const authenticate = async (req, res, next) => {
   }
 
   req.user = data.user;
+  req.token = token;
   next();
 };

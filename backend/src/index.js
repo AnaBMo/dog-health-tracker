@@ -21,6 +21,19 @@ export const supabase = createClient(
   process.env.SUPABASE_PUBLISHABLE_KEY
 );
 
+// Cliente con JWT del usuario para operaciones con RLS
+export const supabaseWithAuth = (token) => createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_PUBLISHABLE_KEY,
+  {
+    global: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  }
+);
+
 app.use(cors());
 app.use(express.json());
 

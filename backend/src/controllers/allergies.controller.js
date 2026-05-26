@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
 export const getAllergies = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('allergies')
     .select('*')
@@ -12,6 +13,7 @@ export const getAllergies = async (req, res) => {
 };
 
 export const getAllergy = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('allergies')
     .select('*')
@@ -25,6 +27,7 @@ export const getAllergy = async (req, res) => {
 };
 
 export const createAllergy = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, severity, notes } = req.body;
 
   if (!name) return res.status(400).json({ error: 'Name is required' });
@@ -41,6 +44,7 @@ export const createAllergy = async (req, res) => {
 };
 
 export const updateAllergy = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, severity, notes } = req.body;
 
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const updateAllergy = async (req, res) => {
 };
 
 export const deleteAllergy = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { error } = await supabase
     .from('allergies')
     .delete()

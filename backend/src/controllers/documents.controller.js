@@ -1,4 +1,4 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 import { uploadFile } from '../services/storage.service.js';
 import { extractDataFromFile } from '../services/ai.service.js';
 
@@ -7,6 +7,7 @@ export const uploadDocument = async (req, res) => {
 
   const { dogId } = req.params;
   const userId = req.user.id;
+  const supabase = supabaseWithAuth(req.token);
 
   try {
     // 1. Obtener la configuración de IA del usuario

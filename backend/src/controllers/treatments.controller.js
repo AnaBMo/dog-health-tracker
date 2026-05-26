@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
 export const getTreatments = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('treatments')
     .select('*')
@@ -12,6 +13,7 @@ export const getTreatments = async (req, res) => {
 };
 
 export const getTreatment = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('treatments')
     .select('*')
@@ -25,6 +27,7 @@ export const getTreatment = async (req, res) => {
 };
 
 export const createTreatment = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { type, name, date, next_date, notes } = req.body;
 
   if (!type || !date) return res.status(400).json({ error: 'Type and date are required' });
@@ -41,6 +44,7 @@ export const createTreatment = async (req, res) => {
 };
 
 export const updateTreatment = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { type, name, date, next_date, notes } = req.body;
 
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const updateTreatment = async (req, res) => {
 };
 
 export const deleteTreatment = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { error } = await supabase
     .from('treatments')
     .delete()

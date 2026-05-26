@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
 export const getVaccines = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('vaccines')
     .select('*')
@@ -12,6 +13,7 @@ export const getVaccines = async (req, res) => {
 };
 
 export const getVaccine = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { data, error } = await supabase
     .from('vaccines')
     .select('*')
@@ -25,6 +27,7 @@ export const getVaccine = async (req, res) => {
 };
 
 export const createVaccine = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, date, next_date, notes } = req.body;
 
   if (!name || !date) return res.status(400).json({ error: 'Name and date are required' });
@@ -41,6 +44,7 @@ export const createVaccine = async (req, res) => {
 };
 
 export const updateVaccine = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { name, date, next_date, notes } = req.body;
 
   const { data, error } = await supabase
@@ -57,6 +61,7 @@ export const updateVaccine = async (req, res) => {
 };
 
 export const deleteVaccine = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
   const { error } = await supabase
     .from('vaccines')
     .delete()
