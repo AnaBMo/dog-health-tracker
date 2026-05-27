@@ -1,5 +1,4 @@
 import { supabaseWithAuth } from '../index.js';
-import { uploadFile } from '../services/storage.service.js';
 import { extractDataFromFile } from '../services/ai.service.js';
 
 export const uploadDocument = async (req, res) => {
@@ -33,10 +32,7 @@ export const uploadDocument = async (req, res) => {
       return res.status(404).json({ error: 'Dog not found' });
     }
 
-    // 3. Subir el archivo a Supabase Storage
-    const { filePath, publicUrl } = await uploadFile(req.file, userId, dogId, req.token);
-
-    // 4. Extraer datos con IA
+    // 3. Extraer datos con IA (sin guardar el archivo)
     const extractedData = await extractDataFromFile(
       req.file.buffer,
       req.file.mimetype,
@@ -45,12 +41,11 @@ export const uploadDocument = async (req, res) => {
       dog.name
     );
 
-    // 5. Guardar el documento en la base de datos
+    // 4. Guardar el documento en la base de datos (sin file_url)
     const { data: document, error: docError } = await supabase
       .from('documents')
       .insert([{
         dog_id: dogId,
-        file_url: publicUrl,
         file_name: req.file.originalname,
         extracted_data: extractedData
       }])
@@ -59,40 +54,46 @@ export const uploadDocument = async (req, res) => {
 
     if (docError) throw new Error(docError.message);
 
-    // 6. Guardar la visita veterinaria si hay datos
+    // 5. Guardar la visita veterinaria si hay datos
     if (extractedData.visit_date) {
-      await supabase.from('vet_visits').insert([{
+      const { data: vetVisit } = await supabase.from('vet_visits').insert([{
         dog_id: dogId,
         visit_date: extractedData.visit_date,
         reason: extractedData.reason,
         diagnosis: extractedData.diagnosis,
         notes: extractedData.notes,
-        document_url: publicUrl
-      }]);
+        document_id: document.id
+      }]).select().single();
+
+      if (vetVisit) {
+        await supabase.from('documents')
+          .update({ vet_visit_id: vetVisit.id })
+          .eq('id', document.id);
+      }
     }
 
-    // 7. Guardar vacunas si las hay
+    // 6. Guardar vacunas si las hay
     if (extractedData.vaccines?.length > 0) {
       await supabase.from('vaccines').insert(
-        extractedData.vaccines.map(v => ({ ...v, dog_id: dogId }))
+        extractedData.vaccines.map(v => ({ ...v, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 8. Guardar tratamientos si los hay
+    // 7. Guardar tratamientos si los hay
     if (extractedData.treatments?.length > 0) {
       await supabase.from('treatments').insert(
-        extractedData.treatments.map(t => ({ ...t, dog_id: dogId }))
+        extractedData.treatments.map(t => ({ ...t, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 9. Guardar alergias si las hay
+    // 8. Guardar alergias si las hay
     if (extractedData.allergies?.length > 0) {
       await supabase.from('allergies').insert(
-        extractedData.allergies.map(a => ({ ...a, dog_id: dogId }))
+        extractedData.allergies.map(a => ({ ...a, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 10. Actualizar peso del perro si está disponible
+    // 9. Actualizar peso del perro si está disponible
     if (extractedData.weight) {
       await supabase.from('dogs')
         .update({ weight: extractedData.weight })

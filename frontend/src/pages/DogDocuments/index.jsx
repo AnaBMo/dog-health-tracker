@@ -18,6 +18,7 @@ const DogDocuments = () => {
   const [report, setReport] = useState('');
   const [error, setError] = useState('');
   const [uploadError, setUploadError] = useState('');
+  const [expandedDoc, setExpandedDoc] = useState(null);
 
   useEffect(() => {
     getDog(id).then((r) => setDog(r.data)).catch(() => navigate('/dogs'));
@@ -48,7 +49,7 @@ const DogDocuments = () => {
       const formData = new FormData();
       formData.append('file', file);
       const res = await uploadDocument(id, formData);
-      setDocuments((prev) => [res.data, ...prev]);
+      setDocuments((prev) => [res.data.document, ...prev]);
     } catch (err) {
       setUploadError(err.response?.data?.error || 'No se pudo subir el archivo. Inténtalo de nuevo.');
     } finally {
@@ -58,7 +59,7 @@ const DogDocuments = () => {
   };
 
   const handleDelete = async (docId) => {
-    if (!confirm('¿Eliminar este documento?')) return;
+    if (!confirm('¿Eliminar este registro y todos los datos asociados (visita, vacunas, tratamientos)?')) return;
     try {
       await deleteDocument(id, docId);
       setDocuments((prev) => prev.filter((d) => d.id !== docId));
@@ -81,17 +82,18 @@ const DogDocuments = () => {
     }
   };
 
-  const getFileIcon = (mimeType) => {
-    if (mimeType === 'application/pdf') return '📄';
-    if (mimeType?.startsWith('image/')) return '🖼️';
-    return '📎';
-  };
-
-  const formatSize = (bytes) => {
-    if (!bytes) return '';
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  const formatExtractedData = (data) => {
+    if (!data) return [];
+    const items = [];
+    if (data.visit_date) items.push(`📅 Visita: ${new Date(data.visit_date).toLocaleDateString('es-ES')}`);
+    if (data.reason) items.push(`🔍 Motivo: ${data.reason}`);
+    if (data.diagnosis) items.push(`🩺 Diagnóstico: ${data.diagnosis}`);
+    if (data.weight) items.push(`⚖️ Peso: ${data.weight} kg`);
+    if (data.vaccines?.length > 0) items.push(`💉 Vacunas: ${data.vaccines.map(v => v.name).join(', ')}`);
+    if (data.treatments?.length > 0) items.push(`💊 Tratamientos: ${data.treatments.map(t => t.name).join(', ')}`);
+    if (data.allergies?.length > 0) items.push(`⚠️ Alergias: ${data.allergies.map(a => a.name).join(', ')}`);
+    if (data.notes) items.push(`📝 Notas: ${data.notes}`);
+    return items;
   };
 
   return (
@@ -121,7 +123,7 @@ const DogDocuments = () => {
             className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center cursor-pointer hover:border-blue-300 hover:bg-blue-50 transition-colors"
           >
             {uploading ? (
-              <p className="text-gray-400 text-sm">Subiendo y procesando...</p>
+              <p className="text-gray-400 text-sm">Procesando con IA...</p>
             ) : (
               <>
                 <span className="text-3xl">☁️</span>
@@ -138,6 +140,10 @@ const DogDocuments = () => {
             onChange={handleUpload}
             className="hidden"
           />
+
+          <p className="mt-3 text-xs text-gray-400">
+            🔒 El archivo no se almacena. Solo se guardan los datos extraídos para proteger la privacidad.
+          </p>
 
           {uploadError && (
             <p className="mt-3 text-sm text-red-500 bg-red-50 px-4 py-2.5 rounded-lg">{uploadError}</p>
@@ -176,7 +182,7 @@ const DogDocuments = () => {
 
         {/* Lista de documentos */}
         <div>
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">Documentos subidos</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">Registros de subidas</h2>
 
           {loading && (
             <p className="text-gray-400 text-sm text-center py-8">Cargando...</p>
@@ -185,42 +191,53 @@ const DogDocuments = () => {
           {!loading && documents.length === 0 && (
             <div className="text-center py-10 bg-white rounded-2xl border border-gray-100">
               <span className="text-4xl">📂</span>
-              <p className="mt-3 text-gray-500 text-sm">No hay documentos subidos todavía</p>
+              <p className="mt-3 text-gray-500 text-sm">No hay documentos procesados todavía</p>
             </div>
           )}
 
           {!loading && documents.length > 0 && (
             <div className="space-y-3">
               {documents.map((doc) => (
-                <div key={doc.id} className="bg-white rounded-xl border border-gray-100 p-4 flex items-center justify-between gap-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <span className="text-2xl flex-shrink-0">{getFileIcon(doc.mime_type)}</span>
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name || 'Documento'}</p>
-                      <p className="text-xs text-gray-400">
-                        {new Date(doc.created_at).toLocaleDateString('es-ES')}
-                        {doc.file_size && ` · ${formatSize(doc.file_size)}`}
-                      </p>
+                <div key={doc.id} className="bg-white rounded-xl border border-gray-100 p-4">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="text-2xl flex-shrink-0">📋</span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-gray-900 truncate">{doc.file_name || 'Documento'}</p>
+                        <p className="text-xs text-gray-400">
+                          {new Date(doc.created_at).toLocaleDateString('es-ES')}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-3 flex-shrink-0">
-                    {doc.file_url && (
-                      <a
-                        href={doc.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
+                    <div className="flex items-center gap-3 flex-shrink-0">
+                      <button
+                        onClick={() => setExpandedDoc(expandedDoc === doc.id ? null : doc.id)}
                         className="text-sm text-blue-600 hover:underline"
                       >
-                        Ver
-                      </a>
-                    )}
-                    <button
-                      onClick={() => handleDelete(doc.id)}
-                      className="text-sm text-red-400 hover:text-red-600"
-                    >
-                      Eliminar
-                    </button>
+                        {expandedDoc === doc.id ? 'Ocultar' : 'Ver datos'}
+                      </button>
+                      <button
+                        onClick={() => handleDelete(doc.id)}
+                        className="text-sm text-red-400 hover:text-red-600"
+                      >
+                        Eliminar
+                      </button>
+                    </div>
                   </div>
+
+                  {expandedDoc === doc.id && (
+                    <div className="mt-3 pt-3 border-t border-gray-100">
+                      {formatExtractedData(doc.extracted_data).length > 0 ? (
+                        <ul className="space-y-1">
+                          {formatExtractedData(doc.extracted_data).map((item, i) => (
+                            <li key={i} className="text-xs text-gray-600">{item}</li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-xs text-gray-400">No se extrajeron datos de este documento.</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
