@@ -1,6 +1,7 @@
-import { supabase } from '../index.js';
+import { supabaseWithAuth } from '../index.js';
 
-export const uploadFile = async (file, userId, dogId) => {
+export const uploadFile = async (file, userId, dogId, token) => {
+  const supabase = supabaseWithAuth(token);
   const fileExt = file.originalname.split('.').pop();
   const fileName = `${Date.now()}.${fileExt}`;
   const filePath = `${userId}/${dogId}/${fileName}`;
@@ -21,7 +22,8 @@ export const uploadFile = async (file, userId, dogId) => {
   return { filePath, publicUrl: urlData.publicUrl };
 };
 
-export const deleteFile = async (filePath) => {
+export const deleteFile = async (filePath, token) => {
+  const supabase = supabaseWithAuth(token);
   const { error } = await supabase.storage
     .from('documents')
     .remove([filePath]);

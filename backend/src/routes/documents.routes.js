@@ -1,12 +1,12 @@
 import { Router } from 'express';
 import { authenticate } from '../middleware/auth.middleware.js';
-import { uploadDocument } from '../controllers/documents.controller.js';
+import { uploadDocument, getDocuments, deleteDocument } from '../controllers/documents.controller.js';
 import multer from 'multer';
 
 const storage = multer.memoryStorage();
 const upload = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { fileSize: 10 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
     if (allowedTypes.includes(file.mimetype)) {
@@ -21,6 +21,8 @@ const router = Router();
 
 router.use(authenticate);
 
+router.get('/:dogId/documents', getDocuments);
 router.post('/:dogId/documents', upload.single('file'), uploadDocument);
+router.delete('/:dogId/documents/:id', deleteDocument);
 
 export default router;

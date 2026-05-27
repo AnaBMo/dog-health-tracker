@@ -49,8 +49,8 @@ const DogDocuments = () => {
       formData.append('file', file);
       const res = await uploadDocument(id, formData);
       setDocuments((prev) => [res.data, ...prev]);
-    } catch {
-      setUploadError('No se pudo subir el archivo. Inténtalo de nuevo.');
+    } catch (err) {
+      setUploadError(err.response?.data?.error || 'No se pudo subir el archivo. Inténtalo de nuevo.');
     } finally {
       setUploading(false);
       fileRef.current.value = '';

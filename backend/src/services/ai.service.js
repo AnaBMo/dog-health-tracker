@@ -1,12 +1,18 @@
+import Anthropic from '@anthropic-ai/sdk';
 import { createRequire } from 'module';
 const require = createRequire(import.meta.url);
-const pdfParse = require('pdf-parse');
 
-import Anthropic from '@anthropic-ai/sdk';
+const parsePDF = async (buffer) => {
+  const pdfParse = require('pdf-parse');
+  const data = await pdfParse(buffer);
+  return data.text;
+};
 
 const getExtractionPrompt = (dogName) => `Eres un asistente veterinario experto.
 El informe que vas a analizar pertenece al paciente: ${dogName}.
-Si el informe menciona un nombre de paciente diferente, indícalo en el campo "notes" con un aviso.
+Comprueba si el nombre "${dogName}" aparece en algún lugar del documento (ignorando mayúsculas/minúsculas y tildes). 
+- Si aparece: el campo "notes" debe ser null (o usarlo solo para notas médicas relevantes).
+- Si NO aparece: indica en "notes" "Aviso: el nombre ${dogName} no aparece en este documento. Verifica que el informe corresponde a este paciente."
 
 Analiza este informe veterinario y extrae la siguiente información en formato JSON:
 
@@ -42,7 +48,8 @@ const extractWithAnthropic = async (content, isImage, mimeType, apiKey, prompt) 
     messages
   });
 
-  return JSON.parse(response.content[0].text);
+  const text = response.content[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(text);
 };
 
 const extractWithOpenAI = async (content, isImage, mimeType, apiKey, prompt) => {
@@ -61,7 +68,8 @@ const extractWithOpenAI = async (content, isImage, mimeType, apiKey, prompt) => 
   });
 
   const data = await response.json();
-  return JSON.parse(data.choices[0].message.content);
+  const text = data.choices[0].message.content.replace(/```json|```/g, '').trim();
+  return JSON.parse(text);
 };
 
 const extractWithGemini = async (content, isImage, mimeType, apiKey, prompt) => {
@@ -69,14 +77,18 @@ const extractWithGemini = async (content, isImage, mimeType, apiKey, prompt) => 
     ? [{ inline_data: { mime_type: mimeType, data: content } }, { text: prompt }]
     : [{ text: `${prompt}\n\nINFORME:\n${content}` }];
 
-  const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts }] })
-  });
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts }] })
+    }
+  );
 
   const data = await response.json();
-  return JSON.parse(data.candidates[0].content.parts[0].text);
+  const text = data.candidates[0].content.parts[0].text.replace(/```json|```/g, '').trim();
+  return JSON.parse(text);
 };
 
 export const extractDataFromFile = async (fileBuffer, mimeType, provider, apiKey, dogName) => {
@@ -85,8 +97,10 @@ export const extractDataFromFile = async (fileBuffer, mimeType, provider, apiKey
   let content;
 
   if (isPDF) {
-    const pdfData = await pdfParse(fileBuffer);
-    content = pdfData.text;
+    content = await parsePDF(fileBuffer);
+    if (!content || content.trim().length < 50) {
+      throw new Error('El PDF parece estar escaneado. Por favor, sube una imagen (JPG, PNG) en su lugar.');
+    }
   } else {
     content = fileBuffer.toString('base64');
   }

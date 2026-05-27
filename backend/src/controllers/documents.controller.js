@@ -34,7 +34,7 @@ export const uploadDocument = async (req, res) => {
     }
 
     // 3. Subir el archivo a Supabase Storage
-    const { filePath, publicUrl } = await uploadFile(req.file, userId, dogId);
+    const { filePath, publicUrl } = await uploadFile(req.file, userId, dogId, req.token);
 
     // 4. Extraer datos con IA
     const extractedData = await extractDataFromFile(
@@ -108,4 +108,34 @@ export const uploadDocument = async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+export const getDocuments = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
+  const { dogId } = req.params;
+
+  const { data, error } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('dog_id', dogId)
+    .order('created_at', { ascending: false });
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  res.json(data);
+};
+
+export const deleteDocument = async (req, res) => {
+  const supabase = supabaseWithAuth(req.token);
+  const { dogId, id } = req.params;
+
+  const { error } = await supabase
+    .from('documents')
+    .delete()
+    .eq('id', id)
+    .eq('dog_id', dogId);
+
+  if (error) return res.status(400).json({ error: error.message });
+
+  res.json({ message: 'Document deleted successfully' });
 };
