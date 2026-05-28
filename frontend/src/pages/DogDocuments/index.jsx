@@ -290,8 +290,8 @@ const DogDocuments = () => {
                     <div className="mt-3 pt-3 border-t border-gray-100">
                       {formatExtractedData(doc.extracted_data).length > 0 ? (
                         <ul className="space-y-1">
-                          {formatExtractedData(doc.extracted_data).map((item, i) => (
-                            <li key={i} className="text-xs text-gray-600">{item}</li>
+                          {formatExtractedData(doc.extracted_data).map((item) => (
+                            <li key={item} className="text-xs text-gray-600">{item}</li>
                           ))}
                         </ul>
                       ) : (
