@@ -35,7 +35,13 @@ export const supabaseWithAuth = (token) => createClient(
   }
 );
 
-app.use(cors());
+app.use(cors({
+  origin: [
+    'http://localhost:5173',
+    'https://dog-health-tracker-taupe.vercel.app'
+  ],
+  credentials: true
+}));
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
