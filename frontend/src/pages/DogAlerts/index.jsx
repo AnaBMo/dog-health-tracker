@@ -14,36 +14,88 @@ const AlertCard = ({ alert }) => {
   const config = levelConfig[alert.level] || levelConfig.verde;
   return (
     <div className={`rounded-xl border p-4 ${config.bg} ${config.border}`}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-3">
-          <span className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${config.dot}`} />
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <p className="font-medium text-gray-900">{alert.title}</p>
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badge}`}>
-                {config.label}
-              </span>
-            </div>
-            <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
-            {alert.due_date && (
-              <p className="text-xs text-gray-400 mt-2">
-                Fecha límite: {new Date(alert.due_date).toLocaleDateString('es-ES')}
-                {alert.days_until !== null && (
-                  <span className="ml-1">
-                    ({alert.days_until < 0
-                      ? `hace ${Math.abs(alert.days_until)} días`
-                      : alert.days_until === 0
-                      ? 'hoy'
-                      : `en ${alert.days_until} días`})
-                  </span>
-                )}
-              </p>
-            )}
+      <div className="flex items-start gap-3">
+        <span className={`mt-1.5 w-2.5 h-2.5 rounded-full flex-shrink-0 ${config.dot}`} />
+        <div>
+          <div className="flex items-center gap-2 flex-wrap">
+            <p className="font-medium text-gray-900">{alert.title}</p>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${config.badge}`}>
+              {config.label}
+            </span>
           </div>
+          <p className="text-sm text-gray-600 mt-1">{alert.message}</p>
+          {alert.due_date && (
+            <p className="text-xs text-gray-400 mt-2">
+              Fecha límite: {new Date(alert.due_date).toLocaleDateString('es-ES')}
+              {alert.days_until !== null && (
+                <span className="ml-1">
+                  ({alert.days_until < 0
+                    ? `hace ${Math.abs(alert.days_until)} días`
+                    : alert.days_until === 0
+                    ? 'hoy'
+                    : `en ${alert.days_until} días`})
+                </span>
+              )}
+            </p>
+          )}
         </div>
       </div>
     </div>
   );
+};
+
+const calculateUpcomingAlerts = (records) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const alerts = [];
+
+  const daysUntil = (dateStr) => {
+    const d = new Date(dateStr);
+    d.setHours(0, 0, 0, 0);
+    return Math.round((d - today) / (1000 * 60 * 60 * 24));
+  };
+
+  // Vacunas con next_date
+  (records.vaccines || []).forEach((v) => {
+    if (!v.next_date) return;
+    const days = daysUntil(v.next_date);
+    if (days > 30) return; // solo mostramos las próximas 30 días o vencidas
+    alerts.push({
+      id: `upcoming_vaccine_${v.id}`,
+      level: days < 0 ? 'roja' : days <= 14 ? 'amarilla' : 'verde',
+      category: 'vacuna',
+      title: `Vacuna: ${v.name}`,
+      message: days < 0
+        ? `La próxima dosis debería haberse administrado hace ${Math.abs(days)} días.`
+        : days === 0
+        ? 'La próxima dosis es hoy.'
+        : `La próxima dosis está programada en ${days} días.`,
+      due_date: v.next_date,
+      days_until: days,
+    });
+  });
+
+  // Tratamientos con next_date
+  (records.treatments || []).forEach((t) => {
+    if (!t.next_date) return;
+    const days = daysUntil(t.next_date);
+    if (days > 30) return;
+    alerts.push({
+      id: `upcoming_treatment_${t.id}`,
+      level: days < 0 ? 'roja' : days <= 14 ? 'amarilla' : 'verde',
+      category: 'tratamiento',
+      title: `Tratamiento: ${t.name}`,
+      message: days < 0
+        ? `La próxima aplicación de ${t.name} debería haberse realizado hace ${Math.abs(days)} días.`
+        : days === 0
+        ? `La próxima aplicación de ${t.name} es hoy.`
+        : `La próxima aplicación de ${t.name} está programada en ${days} días.`,
+      due_date: t.next_date,
+      days_until: days,
+    });
+  });
+
+  return alerts;
 };
 
 const DogAlerts = () => {
@@ -66,9 +118,22 @@ const DogAlerts = () => {
       .finally(() => setLoading(false));
   }, [dog]);
 
-  const rojas = result?.alerts?.filter((a) => a.level === 'roja') || [];
-  const amarillas = result?.alerts?.filter((a) => a.level === 'amarilla') || [];
-  const verdes = result?.alerts?.filter((a) => a.level === 'verde') || [];
+  const upcomingAlerts = result?.records ? calculateUpcomingAlerts(result.records) : [];
+
+  // Combinar alertas de IA con las calculadas, evitando duplicados por fecha+categoría
+  const aiSignatures = new Set(
+    (result?.alerts || [])
+      .filter((a) => a.due_date && a.category)
+      .map((a) => `${a.category}_${a.due_date}`)
+  );
+  const uniqueUpcoming = upcomingAlerts.filter(
+    (a) => !aiSignatures.has(`${a.category}_${a.due_date}`)
+  );
+  const allAlerts = [...(result?.alerts || []), ...uniqueUpcoming];
+
+  const rojas = allAlerts.filter((a) => a.level === 'roja');
+  const amarillas = allAlerts.filter((a) => a.level === 'amarilla');
+  const verdes = allAlerts.filter((a) => a.level === 'verde');
 
   return (
     <PageLayout>
@@ -97,7 +162,7 @@ const DogAlerts = () => {
 
         {!loading && result && (
           <>
-            {result.alerts.length === 0 ? (
+            {allAlerts.length === 0 ? (
               <div className="text-center py-16">
                 <span className="text-5xl">✅</span>
                 <p className="mt-4 text-gray-600 font-medium">Todo al día</p>
@@ -105,7 +170,9 @@ const DogAlerts = () => {
               </div>
             ) : (
               <div className="space-y-6">
-                <p className="text-gray-600 text-sm bg-gray-100 rounded-xl px-4 py-3">{result.summary}</p>
+                {result.summary && (
+                  <p className="text-gray-600 text-sm bg-gray-100 rounded-xl px-4 py-3">{result.summary}</p>
+                )}
 
                 {rojas.length > 0 && (
                   <div className="space-y-3">

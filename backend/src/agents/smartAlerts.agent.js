@@ -1,4 +1,4 @@
-const getAlertsPrompt = (dog, records, today) => `Eres un sistema de alertas veterinarias. Analiza los datos y genera alertas accionables.
+const getAlertsPrompt = (dog, records, today) => `Eres un sistema de alertas veterinarias inteligente. Analiza los datos y genera alertas accionables.
 
 FECHA DE HOY: ${today}
 
@@ -16,23 +16,26 @@ Devuelve ÚNICAMENTE un JSON con esta estructura, sin explicaciones adicionales:
 {
   "alerts": [
     {
-      "id": "identificador único descriptivo, ej: vaccine_rabies_expired",
+      "id": "identificador único descriptivo, ej: no_visit_12_months",
       "level": "roja|amarilla|verde",
-      "category": "vacuna|tratamiento|visita|peso|alergia|general",
+      "category": "visita|peso|alergia|general",
       "title": "título corto",
       "message": "mensaje claro para el dueño explicando qué hacer",
       "due_date": "fecha relevante (YYYY-MM-DD) o null",
       "days_until": número de días hasta la fecha (negativo si ya pasó) o null
     }
   ],
+  "summary": "resumen breve del estado general del paciente",
   "has_urgent": true o false,
   "total_alerts": número total de alertas
 }
 
 REGLAS para niveles:
-- ROJA: vacuna vencida, tratamiento vencido, sin visita veterinaria en más de 12 meses
-- AMARILLA: vacuna vence en menos de 30 días, tratamiento vence en menos de 15 días, sin visita en 6-12 meses
-- VERDE: recordatorios generales, peso no actualizado, próximas citas en más de 30 días
+- ROJA: sin visita veterinaria en más de 12 meses
+- AMARILLA: sin visita veterinaria en 6-12 meses
+- VERDE: recordatorios generales, peso no actualizado
+
+IMPORTANTE: NO generes alertas sobre vacunas ni tratamientos próximos o vencidos. Eso lo gestiona otro sistema. Céntrate en visitas veterinarias, peso, alergias y recomendaciones generales de salud.
 
 Si todo está en orden y no hay alertas, devuelve "alerts": [] igualmente.`;
 

@@ -118,7 +118,7 @@ export const smartAlerts = async (req, res) => {
 
     const result = await generateSmartAlerts(dog, records, ai_provider, ai_api_key);
 
-    res.json({ dog_name: dog.name, ...result });
+    res.json({ dog_name: dog.name, ...result, records });
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
