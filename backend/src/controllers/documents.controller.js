@@ -6,6 +6,7 @@ export const uploadDocument = async (req, res) => {
 
   const { dogId } = req.params;
   const userId = req.user.id;
+  const confirmed = req.body.confirmed === 'true';
   const supabase = supabaseWithAuth(req.token);
 
   try {
@@ -32,7 +33,7 @@ export const uploadDocument = async (req, res) => {
       return res.status(404).json({ error: 'Dog not found' });
     }
 
-    // 3. Extraer datos con IA (sin guardar el archivo)
+    // 3. Extraer datos con IA
     const extractedData = await extractDataFromFile(
       req.file.buffer,
       req.file.mimetype,
@@ -41,7 +42,17 @@ export const uploadDocument = async (req, res) => {
       dog.name
     );
 
-    // 4. Guardar el documento en la base de datos (sin file_url)
+    // 4. Comprobar si hay mismatch de nombre y no está confirmado
+    const hasMismatch = extractedData.notes && extractedData.notes.startsWith('Aviso:');
+    if (hasMismatch && !confirmed) {
+      return res.status(200).json({
+        name_mismatch: true,
+        dog_name: dog.name,
+        extractedData
+      });
+    }
+
+    // 5. Guardar el documento en la base de datos
     const { data: document, error: docError } = await supabase
       .from('documents')
       .insert([{
@@ -54,7 +65,7 @@ export const uploadDocument = async (req, res) => {
 
     if (docError) throw new Error(docError.message);
 
-    // 5. Guardar la visita veterinaria si hay datos
+    // 6. Guardar la visita veterinaria si hay datos
     if (extractedData.visit_date) {
       const { data: vetVisit } = await supabase.from('vet_visits').insert([{
         dog_id: dogId,
@@ -72,28 +83,28 @@ export const uploadDocument = async (req, res) => {
       }
     }
 
-    // 6. Guardar vacunas si las hay
+    // 7. Guardar vacunas si las hay
     if (extractedData.vaccines?.length > 0) {
       await supabase.from('vaccines').insert(
         extractedData.vaccines.map(v => ({ ...v, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 7. Guardar tratamientos si los hay
+    // 8. Guardar tratamientos si los hay
     if (extractedData.treatments?.length > 0) {
       await supabase.from('treatments').insert(
         extractedData.treatments.map(t => ({ ...t, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 8. Guardar alergias si las hay
+    // 9. Guardar alergias si las hay
     if (extractedData.allergies?.length > 0) {
       await supabase.from('allergies').insert(
         extractedData.allergies.map(a => ({ ...a, dog_id: dogId, document_id: document.id }))
       );
     }
 
-    // 9. Actualizar peso del perro si está disponible
+    // 10. Actualizar peso del perro si está disponible
     if (extractedData.weight) {
       await supabase.from('dogs')
         .update({ weight: extractedData.weight })

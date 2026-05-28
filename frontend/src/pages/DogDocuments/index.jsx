@@ -19,6 +19,8 @@ const DogDocuments = () => {
   const [error, setError] = useState('');
   const [uploadError, setUploadError] = useState('');
   const [expandedDoc, setExpandedDoc] = useState(null);
+  const [nameMismatch, setNameMismatch] = useState(null); // { extractedData }
+  const [pendingFile, setPendingFile] = useState(null); // archivo pendiente de confirmar
 
   useEffect(() => {
     getDog(id).then((r) => setDog(r.data)).catch(() => navigate('/dogs'));
@@ -49,13 +51,42 @@ const DogDocuments = () => {
       const formData = new FormData();
       formData.append('file', file);
       const res = await uploadDocument(id, formData);
-      setDocuments((prev) => [res.data.document, ...prev]);
+
+      if (res.data.name_mismatch) {
+        setPendingFile(file);
+        setNameMismatch(res.data);
+      } else {
+        setDocuments((prev) => [res.data.document, ...prev]);
+      }
     } catch (err) {
       setUploadError(err.response?.data?.error || 'No se pudo subir el archivo. Inténtalo de nuevo.');
     } finally {
       setUploading(false);
       fileRef.current.value = '';
     }
+  };
+
+  const handleConfirm = async () => {
+    if (!pendingFile) return;
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', pendingFile);
+      formData.append('confirmed', 'true');
+      const res = await uploadDocument(id, formData);
+      setDocuments((prev) => [res.data.document, ...prev]);
+      setNameMismatch(null);
+      setPendingFile(null);
+    } catch (err) {
+      setUploadError(err.response?.data?.error || 'No se pudo subir el archivo. Inténtalo de nuevo.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleCancelUpload = () => {
+    setNameMismatch(null);
+    setPendingFile(null);
   };
 
   const handleDelete = async (docId) => {
@@ -149,6 +180,36 @@ const DogDocuments = () => {
             <p className="mt-3 text-sm text-red-500 bg-red-50 px-4 py-2.5 rounded-lg">{uploadError}</p>
           )}
         </div>
+
+        {/* Aviso de nombre no coincide */}
+        {nameMismatch && (
+          <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 mb-6">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">⚠️</span>
+              <div>
+                <h2 className="text-sm font-semibold text-yellow-800 mb-1">El nombre del paciente no coincide</h2>
+                <p className="text-sm text-yellow-700 mb-4">
+                  El nombre <strong>{dog?.name}</strong> no aparece en este documento. Es posible que el informe pertenezca a otro paciente. ¿Quieres continuar guardando los datos de todas formas?
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={handleConfirm}
+                    disabled={uploading}
+                    className="bg-yellow-600 hover:bg-yellow-700 disabled:bg-yellow-300 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors"
+                  >
+                    {uploading ? 'Guardando...' : 'Continuar de todas formas'}
+                  </button>
+                  <button
+                    onClick={handleCancelUpload}
+                    className="bg-white hover:bg-gray-50 text-gray-700 text-sm font-medium px-4 py-2 rounded-lg border border-gray-200 transition-colors"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Analizar historial completo */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
