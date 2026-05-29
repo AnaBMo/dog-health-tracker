@@ -5,7 +5,8 @@ export const getVetVisits = async (req, res) => {
   const { data, error } = await supabase
     .from('vet_visits')
     .select('*')
-    .eq('dog_id', req.params.dogId);
+    .eq('dog_id', req.params.dogId)
+    .order('visit_date', { ascending: false });
 
   if (error) return res.status(400).json({ error: error.message });
 
