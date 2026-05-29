@@ -52,18 +52,22 @@ export const uploadDocument = async (req, res) => {
       });
     }
 
-    // 5. Guardar el documento en la base de datos
-    const { data: document, error: docError } = await supabase
-      .from('documents')
-      .insert([{
-        dog_id: dogId,
-        file_name: req.file.originalname,
-        extracted_data: extractedData
-      }])
-      .select()
-      .single();
+    // 5. Guardar los datos extraídos del documento en la base de datos
+        const fileName = extractedData.visit_date
+          ? `${extractedData.visit_date}${req.file.originalname.substring(req.file.originalname.lastIndexOf('.'))}`
+          : req.file.originalname;
 
-    if (docError) throw new Error(docError.message);
+        const { data: document, error: docError } = await supabase
+          .from('documents')
+          .insert([{
+            dog_id: dogId,
+            file_name: fileName,
+            extracted_data: extractedData
+          }])
+          .select()
+          .single();
+
+        if (docError) throw new Error(docError.message);
 
     // 6. Guardar la visita veterinaria si hay datos
     if (extractedData.visit_date) {
