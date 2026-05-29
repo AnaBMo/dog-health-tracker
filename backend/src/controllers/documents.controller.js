@@ -104,11 +104,23 @@ export const uploadDocument = async (req, res) => {
       );
     }
 
-    // 10. Actualizar peso del perro si está disponible
-    if (extractedData.weight) {
-      await supabase.from('dogs')
-        .update({ weight: extractedData.weight })
-        .eq('id', dogId);
+    // 10. Actualizar peso del perro solo si es la visita más reciente
+    if (extractedData.weight && extractedData.visit_date) {
+      const { data: latestVisit } = await supabase
+        .from('vet_visits')
+        .select('visit_date')
+        .eq('dog_id', dogId)
+        .not('id', 'eq', document.id)
+        .order('visit_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      const isMoreRecent = !latestVisit || extractedData.visit_date >= latestVisit.visit_date;
+      if (isMoreRecent) {
+        await supabase.from('dogs')
+          .update({ weight: extractedData.weight })
+          .eq('id', dogId);
+      }
     }
 
     res.status(201).json({
